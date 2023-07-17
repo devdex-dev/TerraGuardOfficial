@@ -57,7 +57,7 @@ void loop() {
   val2 = phosphorous();
    delay(500);
   val3 = potassium();
-  delay(500);
+  delay(20000);
 
  
   // Check if the values have stabilized
