@@ -21,6 +21,17 @@ SoftwareSerial mod(2, 3);
 SoftwareSerial espSerial(1, 0); // RX, TX
 //SoftwareSerial mod(10, 11);
 
+// Variables to store the previous values
+byte prevVal1, prevVal2, prevVal3;
+
+// Number of consecutive stable readings required
+const int stableCount = 5;
+
+// Counter variables to track stability
+int stableVal1Count = 0;
+int stableVal2Count = 0;
+int stableVal3Count = 0;
+
 void setup() {
   // Set the baud rate for the Serial port
   Serial.begin(9600);
@@ -48,22 +59,49 @@ void loop() {
   val3 = potassium();
   delay(500);
 
- // Print values to the serial monitor -OLD
-  Serial.print("n: ");
-  Serial.print(String(val1));
-  Serial.print(" mg/kg");
-  
-  Serial.print(", p: ");
-  Serial.print(String(val2));
-  Serial.print(" mg/kg");
  
-  Serial.print(", k:");
-  Serial.print(String(val3));
-  Serial.println(" mg/kg");
- 
-  
-   }
+  // Check if the values have stabilized
+  if (val1 == prevVal1) {
+    stableVal1Count++;
+  } else {
+    stableVal1Count = 0;
+    prevVal1 = val1;
+  }
 
+  if (val2 == prevVal2) {
+    stableVal2Count++;
+  } else {
+    stableVal2Count = 0;
+    prevVal2 = val2;
+  }
+
+  if (val3 == prevVal3) {
+    stableVal3Count++;
+  } else {
+    stableVal3Count = 0;
+    prevVal3 = val3;
+  }
+
+  // Print values to the serial monitor when stabilized and not all 255
+  if (stableVal1Count >= stableCount && stableVal2Count >= stableCount && stableVal3Count >= stableCount) {
+    if (!(val1 == 255 && val2 == 255 && val3 == 255)) {
+      Serial.print("n: ");
+      Serial.print(val1);
+      Serial.print(" mg/kg, p: ");
+      Serial.print(val2);
+      Serial.print(" mg/kg, k: ");
+      Serial.print(val3);
+      Serial.println(" mg/kg");
+      delay(1000);
+      exit(0); // Terminate the code or loop
+    } else {
+      // Serial.println("No data");
+     
+    }
+  } else {
+    // Serial.println("Reading...");
+  }
+}
  
 byte nitrogen(){
   digitalWrite(DE,HIGH);
