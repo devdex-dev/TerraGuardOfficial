@@ -45,8 +45,9 @@ void loop() {
     firebaseJson.set("k", data.substring(data.indexOf("k:") + 2));
 
     // Send data to Firebase
-    Firebase.pushJSON(firebaseData, "/date", firebaseJson);
+    Firebase.pushJSON(firebaseData, "/NPK", firebaseJson);
     }
+   
   }
 
 
