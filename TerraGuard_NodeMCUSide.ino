@@ -1,53 +1,26 @@
-#include <TinyGPS++.h>
+#include <Arduino.h>
 #include <ESP8266WiFi.h>
+#include <Firebase_ESP_Client.h>
 #include <SoftwareSerial.h>
-#include <FirebaseESP8266.h>
+#include <TinyGPS++.h>
+#include <addons/RTDBHelper.h>
+#define WIFI_SSID "Midnight"
+#define WIFI_PASSWORD "meetMe@Mid2023"
 
-// Initialize GPS and Serial
+
+FirebaseData fbdo;
+FirebaseAuth auth;
+FirebaseConfig config;
 TinyGPSPlus gps;
+
+
+SoftwareSerial espSerial(1, 0); 
 SoftwareSerial SerialGPS(4, 5);
 
-// Firebase objects
-FirebaseData firebaseData;
-FirebaseJson firebaseJson;
-
 // GPS data
-  float Latitude, Longitude;
-  int year, month, date, hour, minute;
-  String DateString, TimeString, LatitudeString, LongitudeString;
-
-WiFiServer server(80);
-// WiFi configuration
-const char* ssid = "Midnight";
-const char* password = "meetMe@Mid2023";
-
-// Firebase configuration
-
-
-
-
-void setupWiFi() {
-  Serial.print("Connecting to WiFi");
-  WiFi.begin(ssid, password);
-
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-
-  Serial.println();
-  Serial.println("WiFi connected!");
-  server.begin();
-  Serial.println("Server started");
-  Serial.println(WiFi.localIP());
-}
-
-void setupFirebase() {
-  FirebaseConfig config;
-  config.host = "https://temphum-4ede4-default-rtdb.firebaseio.com/";
-  config.api_key = "ZC8aQ7uHOT6n3AgQp2JQyDwClkK9nwXt1ddQ8v0a";
-  Firebase.begin(&config, NULL);
-}
+float Latitude, Longitude;
+int year, month, date, hour, minute;
+String DateString, TimeString, LatitudeString, LongitudeString;
 
 void readGPSData() {
 
@@ -76,60 +49,64 @@ void readGPSData() {
   }
 }
 
-void sendHTMLResponse(WiFiClient& client) {
+void connectToWifi() {
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
-  String html = "<!DOCTYPE html><html><head><title>NEO-6M GPS Readings</title>";
-  html += "<style>table, th, td {border: 1px solid blue;}</style></head><body>";
-  html += "<h1 style='font-size:300%;' ALIGN='CENTER'>NEO-6M GPS Readings</h1>";
-  html += "<p ALIGN='CENTER' style='font-size:150%;'><b>Location Details</b></p>";
-  html += "<table ALIGN='CENTER' style='width:50%'>";
-  html += "<tr><th>Latitude</th><td ALIGN='CENTER'>" + LatitudeString + "</td></tr>";
-  html += "<tr><th>Longitude</th><td ALIGN='CENTER'>" + LongitudeString + "</td></tr>";
-  html += "<tr><th>Date</th><td ALIGN='CENTER'>" + DateString + "</td></tr>";
-  html += "<tr><th>Time</th><td ALIGN='CENTER'>" + TimeString + "</td></tr>";
-  html += "</table>";
+  // Check if Wi-Fi connection is successful
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("Connecting");
+    // Reconnect every 10 seconds
+    while (true) {
+      delay(10000);
+      WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
-  if (gps.location.isValid()) {
-    String mapLink = "http://maps.google.com/maps?&z=15&mrt=yp&t=k&q=" + LatitudeString + "+" + LongitudeString;
-    html += "<p align='center'><a style='color:RED; font-size:125%;' href='" + mapLink + "' target='_top'>Click here to open the location in Google Maps.</a></p>";
+      if (WiFi.status() == WL_CONNECTED) {
+        Serial.println("Connected to Wi-Fi");
+        break;
+      }
+    }
+  } else {
+    Serial.println("Connected to Wi-Fi");
   }
-
-  html += "</body></html>\n";
-  client.print("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n" + html);
 }
-
-void sendSensorDataToFirebase(String data) {
-  firebaseJson.clear();
-  firebaseJson.set("n", data.substring(data.indexOf("n:") + 2, data.indexOf(", p:")));
-  firebaseJson.set("p", data.substring(data.indexOf("p:") + 2, data.indexOf(", k:")));
-  firebaseJson.set("k", data.substring(data.indexOf("k:") + 2));
-  firebaseJson.set("lat", LatitudeString);
-  firebaseJson.set("long", LongitudeString);
-  firebaseJson.set("date", DateString);
-  firebaseJson.set("time", TimeString);
-  Firebase.pushJSON(firebaseData, "/NPK", firebaseJson);
-}
-
 void setup() {
+  Serial1.begin(9600);
   Serial.begin(9600);
   SerialGPS.begin(9600);
 
-  setupWiFi();
-  setupFirebase();
+  connectToWifi();
+
+  config.database_url = "https://temphum-4ede4-default-rtdb.firebaseio.com";
+  config.signer.tokens.legacy_token = "vouL4do8gj8Y1omI31S5TFZ4wrSKdkW1ZDWV5m1h";
+
+
+  fbdo.setBSSLBufferSize(4096, 1024);
+
+  Firebase.begin(&config, &auth);
 }
 
 void loop() {
-  readGPSData();
-
-  WiFiClient client = server.available();
-  if (client) {
-    sendHTMLResponse(client);
-    delay(100);
-  }
 
   if (Serial.available()) {
+    // Read data from Arduino Uno
     String data = Serial.readStringUntil('\n');
     Serial.println(data);
-    sendSensorDataToFirebase(data);
+    Serial.println(LatitudeString);
+    Serial.println(LongitudeString);
+    Serial.println(DateString);
+    Serial.println(TimeString);
+   
+    // Set the data in the JSON object
+    FirebaseJson firebaseJson;
+    firebaseJson.set("n", data.substring(data.indexOf("n:") + 2, data.indexOf(", p:")));
+    firebaseJson.set("p", data.substring(data.indexOf("p:") + 2, data.indexOf(", k:")));
+    firebaseJson.set("k", data.substring(data.indexOf("k:") + 2));
+    firebaseJson.set("lat", LatitudeString);
+    firebaseJson.set("long", LongitudeString);
+    firebaseJson.set("date", DateString);
+    firebaseJson.set("time", TimeString);
+
+    // Send data to Firebase
+    Firebase.RTDB.pushJSON(&fbdo, "/NPK", &firebaseJson);
   }
 }
