@@ -1,21 +1,15 @@
+#include <TinyGPS++.h>
 #include <SoftwareSerial.h>
 #include <Wire.h>
 #include <SPI.h>
-#include <Wire.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
 
 
 // RE and DE Pins set the RS485 module
 // to Receiver or Transmitter mode
 #define RE 8
 #define DE 7
-#define SCREEN_WIDTH 128  // OLED display width, in pixels
-#define SCREEN_HEIGHT 64  // OLED display height, in pixels
-#define OLED_RESET -1     // Reset pin # (or -1 if sharing Arduino reset pin)
-#define SCREEN_ADDRESS 0x3C
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
+// The serial connection to the GPS device
 
 // Modbus RTU requests for reading NPK values
 const byte nitro[] = { 0x01, 0x03, 0x00, 0x1e, 0x00, 0x01, 0xe4, 0x0c };
@@ -29,6 +23,7 @@ byte values[11];
 
 SoftwareSerial mod(2, 3);
 SoftwareSerial espSerial(1, 0);  // RX, TX
+
 //SoftwareSerial mod(10, 11);
 
 // Variables to store the previous values
@@ -46,27 +41,16 @@ void setup() {
   // Set the baud rate for the Serial port
   Serial.begin(9600);
 
-  while (!Serial) {
-    ;  // wait for serial port to connect. Needed for native USB port only
-  }
-  delay(1000);  // Delay for NodeMCU initialization
   // Set the baud rate for the SerialSoftware object
   mod.begin(9600);
-
-  // initialize the OLED object
-  if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
-    Serial.println(F("SSD1306 allocation failed"));
-    for (;;)
-      ;  // Don't proceed, loop forever
-  }
-  // Clear the buffer.
-  display.clearDisplay();
-
-
 
   // Define pin modes for RE and DE
   pinMode(RE, OUTPUT);
   pinMode(DE, OUTPUT);
+
+  pinMode(9, 1);   //red led
+  pinMode(10, 1);  //green led
+  pinMode(11, 1);  //blue led
 }
 
 void loop() {
@@ -79,7 +63,6 @@ void loop() {
   delay(500);
   val3 = potassium();
   delay(500);
-
 
   // Check if the values have stabilized
   if (val1 == prevVal1) {
@@ -102,30 +85,13 @@ void loop() {
     stableVal3Count = 0;
     prevVal3 = val3;
   }
-  // delay(5000);
-  // Print values to the serial monitor when stabilized and not all 255
+
   if (!(val1 == 255 && val2 == 255 && val3 == 255)) {
+    analogWrite(9, 255);  //blue
+    analogWrite(10, 0);   //green
+    analogWrite(11, 0);   //red
+    delay(1000);
     if (stableVal1Count >= stableCount && stableVal2Count >= stableCount && stableVal3Count >= stableCount) {
-
-
-      display.setTextColor(WHITE);
-      display.setCursor(0, 0);
-      display.setTextSize(1);
-      display.println("Status: Completed!");
-      display.println();
-      display.print("N: ");
-      display.print(val1);
-      display.println(" mg/kg");
-      display.print("P: ");
-      display.print(val2);
-      display.println(" mg/kg");
-      display.print("K: ");
-      display.print(val3);
-      display.print(" mg/kg");
-      display.display();
-      delay(2000);
-      display.clearDisplay();
-
 
       Serial.print("n: ");
       Serial.print(val1);
@@ -134,39 +100,23 @@ void loop() {
       Serial.print(" mg/kg, k: ");
       Serial.print(val3);
       Serial.println(" mg/kg");
-      delay(10000);
-      exit(0);  // Terminate the code or loop
-    } else {
 
-      display.setTextColor(WHITE);
-      display.setCursor(0, 0);
-      display.setTextSize(1);
-      display.println("Reading...");
-      display.setCursor(0, 24);
-      display.setTextSize(1);
-      display.print("Tip: Press 'RES' to \nread new sample.\nPut Device in Open field.");
-      display.display();
-      delay(3000);
-      display.clearDisplay();
-      ;
+      delay(1000);
+      analogWrite(9, 0);     //blue
+      analogWrite(10, 255);  //green
+      analogWrite(11, 0);
+
+      exit(0);  // Terminate the code or loop
+
+    } else {
     }
   } else {
-    display.setTextColor(WHITE);
-    display.setCursor(0, 0);
-    display.setTextSize(1);
-    display.println("No Data");
-    display.setTextColor(BLACK, WHITE);
-    display.setCursor(0, 24);
-    display.setTextSize(2);
-    display.print("TerraGuard");
-    display.display();
-    // display.print("");
-    display.display();
-
-    delay(3000);
-    display.clearDisplay();
+    analogWrite(9, 0);     //blue
+    analogWrite(10, 0);    //green
+    analogWrite(11, 255);  //red
   }
 }
+
 
 byte nitrogen() {
   digitalWrite(DE, HIGH);
