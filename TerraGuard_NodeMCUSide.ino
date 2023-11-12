@@ -22,10 +22,10 @@ FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
 TinyGPSPlus gps;
-SoftwareSerial SerialGPS(0, 2);
+SoftwareSerial SerialGPS(D2, D1); // Using D2 and D1 for GPS
 String WifiStat = "";
 String FirebStat = "No Data";
-String GpsStat = "";
+String GpsStat = "No Location";
 float Latitude, Longitude;
 int year, month, date, hour, minute, second;
 String DateString, TimeString, LatitudeString, LongitudeString;
@@ -216,45 +216,47 @@ void GetGps() {
   if (!client) {
     return;
   }
+// Response
+String s = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n";
+s += "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">";
+s += "<title>TerraGuard Server</title><style>";
+s += "body, h1, h2, p, a, footer { margin: 0; padding: 0; font-family: 'Arial', sans-serif; }";
+s += "body { background-color: white; color: #046307; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 100vh; padding: 20px; }";
+s += ".dashboard-header { text-align: center; margin: 20px 0; }";
+s += ".cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; width: 100%; max-width: 1200px; }";
+s += ".card { background-color: #e8f5e9; border: 1px solid #046307; border-radius: 8px; padding: 20px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); text-align: center; }";
+s += ".card h2 { margin-bottom: 15px; }";
+s += ".card p { font-size: 1.25rem; margin-bottom: 5px; }";
+s += "a { color: #046307; text-decoration: none; font-size: 1rem; }";
+s += "footer { text-align: center; margin-top: auto; padding: 20px 0; width: 100%; background-color: #f0f0f0; }";
+s += "</style></head><body>";
 
-  //Response
-  String s = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n <!DOCTYPE html> <html> <head> <title>NEO-6M GPS Readings</title> <style>";
-  s += "table, th, td {border: 1px solid blue;} </style> </head> <body> <h1  style=";
-  s += "font-size:300%;";
-  s += " ALIGN=CENTER>NEO-6M GPS Readings</h1>";
-  s += "<p ALIGN=CENTER style="
-       "font-size:150%;"
-       "";
-  s += "> <b>Location Details</b></p> <table ALIGN=CENTER style=";
-  s += "width:50%";
-  s += "> <tr> <th>Latitude</th>";
-  s += "<td ALIGN=CENTER >";
-  s += LatitudeString;
-  s += "</td> </tr> <tr> <th>Longitude</th> <td ALIGN=CENTER >";
-  s += LongitudeString;
-  s += "</td> </tr> <tr>  <th>Date</th> <td ALIGN=CENTER >";
-  s += DateString;
-  s += "</td></tr> <tr> <th>Time</th> <td ALIGN=CENTER >";
-  s += TimeString;
-  s += "</td>  </tr> </table> ";
+s += "<div class=\"dashboard-header\"><h1>TerraGuard Quick Dashboard</h1></div>";
 
+s += "<div class=\"cards\">";
 
-  if (gps.location.isValid()) {
-    s += "<p align=center><a style="
-         "color:RED;font-size:125%;"
-         " href="
-         "http://maps.google.com/maps?&z=15&mrt=yp&t=k&q=";
-    s += LatitudeString;
-    s += "+";
-    s += LongitudeString;
-    s += ""
-         " target="
-         "_top"
-         ">Click here</a> to open the location in Google Maps.</p>";
-  }
+s += "<div class=\"card\"><h2>WiFi Status</h2><p>" + WifiStat + "</p></div>";
+s += "<div class=\"card\"><h2>Data Status</h2><p>" + FirebStat + "</p></div>";
+s += "<div class=\"card\"><h2>Location Status</h2><p>" + GpsStat + "</p></div>";
+s += "<hr>";
+s += "<div class=\"card\"><h2>Latitude</h2><p>" + LatitudeString + "</p></div>";
+s += "<div class=\"card\"><h2>Longitude</h2><p>" + LongitudeString + "</p></div>";
+s += "<div class=\"card\"><h2>Date</h2><p>" + DateString + "</p></div>";
+s += "<div class=\"card\"><h2>Time</h2><p>" + TimeString + "</p></div>";
 
-  s += "</body> </html> \n";
+s += "</div>";
 
-  client.print(s);
+// Include the GPS map link if the GPS location is valid
+if (gps.location.isValid()) {
+    s += "<div class=\"dashboard-header\">";
+    s += "<p><a href=\"http://maps.google.com/maps?&z=15&mrt=yp&t=k&q=" + LatitudeString + "+" + LongitudeString + "\" target=\"_top\">Click here</a> to open the location in Google Maps.</p>";
+    s += "</div>";
+}
+
+s += "<footer><p>Powered by <b><i>DimenSoft<i><b></p></footer>";
+
+s += "</body></html>";
+
+client.print(s);
   delay(100);
 }
