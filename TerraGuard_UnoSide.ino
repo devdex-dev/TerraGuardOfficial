@@ -86,35 +86,34 @@ void loop() {
     prevVal3 = val3;
   }
 
-  if (!(val1 == 255 && val2 == 255 && val3 == 255)) {
-    analogWrite(9, 255);  //blue
-    analogWrite(10, 0);   //green
-    analogWrite(11, 0);   //red
+ if ((val1 == 255 && val2 == 255 && val3 == 255) || (val1 == 0 && val2 == 0 && val3 == 0)) {
+    // Keep LED red and do nothing
+    analogWrite(9, 0);   // blue
+    analogWrite(10, 0);  // green
+    analogWrite(11, 255); // red
+} else {
+    // Existing logic
+    analogWrite(9, 255);  // blue
+    analogWrite(10, 0);   // green
+    analogWrite(11, 0);   // red
     delay(1000);
+
     if (stableVal1Count >= stableCount && stableVal2Count >= stableCount && stableVal3Count >= stableCount) {
+        Serial.print("n: ");
+        Serial.print(val1);
+        Serial.print(" mg/kg, p: ");
+        Serial.print(val2);
+        Serial.print(" mg/kg, k: ");
+        Serial.print(val3);
+        Serial.println(" mg/kg");
 
-      Serial.print("n: ");
-      Serial.print(val1);
-      Serial.print(" mg/kg, p: ");
-      Serial.print(val2);
-      Serial.print(" mg/kg, k: ");
-      Serial.print(val3);
-      Serial.println(" mg/kg");
+        delay(1000);
+        analogWrite(9, 255);  // blue
+        analogWrite(10, 0);   // green
+        analogWrite(11, 255); // red
 
-      delay(1000);
-      analogWrite(9, 0);     //blue
-      analogWrite(10, 255);  //green
-      analogWrite(11, 0);
-
-      exit(0);  // Terminate the code or loop
-
-    } else {
+        exit(0);  // Terminate the code or loop
     }
-  } else {
-    analogWrite(9, 0);     //blue
-    analogWrite(10, 0);    //green
-    analogWrite(11, 255);  //red
-  }
 }
 
 
